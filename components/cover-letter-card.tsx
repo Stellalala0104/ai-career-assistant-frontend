@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import type {
+  CareerApiErrorResponse,
+  CoverLetterApiResponse,
+} from "@/types/career";
 
 type CoverLetterCardProps = {
   resumeText: string;
@@ -82,18 +86,30 @@ export function CoverLetterCard({
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as
+        | CoverLetterApiResponse
+        | CareerApiErrorResponse;
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate cover letter.");
+        const message =
+          "error" in data ? data.error : "Failed to generate cover letter.";
+        throw new Error(message);
+      }
+
+      if (!("coverLetter" in data) || !data.coverLetter.trim()) {
+        throw new Error("The API did not return a cover letter.");
       }
 
       onCoverLetterChange(data.coverLetter);
     } catch (err) {
       console.error(err);
-      setError(
-        "We couldn't generate the cover letter. Please check your resume and job description, then try again."
-      );
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "We couldn't generate the cover letter. Please check your resume and job description, then try again.";
+
+      setError(message);
     } finally {
       setIsGeneratingLetter(false);
     }
@@ -130,7 +146,9 @@ export function CoverLetterCard({
       />
 
       <button
-        className={isGeneratingLetter ? "button loading" : "button"}
+        className={
+          isGeneratingLetter ? "button loading" : "button"
+        }
         disabled={!canGenerateLetter || isGeneratingLetter}
         onClick={handleGenerateCoverLetter}
       >
@@ -188,6 +206,7 @@ export function CoverLetterCard({
             <h4>Generated Cover Letter</h4>
             <button
               className="small-button"
+              type="button"
               onClick={() => onCopy(coverLetter, "cover")}
             >
               {copiedItem === "cover" ? "Copied!" : "Copy"}

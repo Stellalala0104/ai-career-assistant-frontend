@@ -59,6 +59,10 @@ export default function Home() {
     setQuestions([]);
   }
 
+  function resetCoverLetterOnly() {
+    setCoverLetter("");
+  }
+
   function getInterviewQuestionsAsText() {
     return questions
       .map(
@@ -71,7 +75,9 @@ Hint: ${q.hint}`
   return (
     <main className="app-shell">
       <Sidebar
-        resumeStatus={isResumeParsed ? "Parsed" : resumeText ? "Ready" : "Pending"}
+        resumeStatus={
+          isResumeParsed ? "Parsed" : resumeText ? "Ready" : "Pending"
+        }
         jdStatus={jobDescription ? "Ready" : "Pending"}
         matchStatus={matchReport ? `${matchReport.overallScore}%` : "Not run"}
       />
@@ -140,8 +146,14 @@ Paste extracted resume text here for now. Backend parsing can be connected later
             copiedItem={copiedItem}
             isResumeParsed={isResumeParsed}
             hasResumeText={hasResumeText}
-            onCompanyChange={setCompany}
-            onRoleChange={setRole}
+            onCompanyChange={(value) => {
+              setCompany(value);
+              resetCoverLetterOnly();
+            }}
+            onRoleChange={(value) => {
+              setRole(value);
+              resetCoverLetterOnly();
+            }}
             onCoverLetterChange={setCoverLetter}
             onCopy={copyToClipboard}
           />

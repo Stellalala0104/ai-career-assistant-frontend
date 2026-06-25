@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { InterviewQuestion } from "../types/career";
+import type {
+  CareerApiErrorResponse,
+  InterviewPrepApiResponse,
+  InterviewQuestion,
+} from "@/types/career";
 
 type InterviewPrepCardProps = {
   resumeText: string;
@@ -56,6 +60,20 @@ export function InterviewPrepCard({
     return "";
   }
 
+  function normalizeInterviewQuestions(
+    rawQuestions: InterviewQuestion[]
+  ): InterviewQuestion[] {
+    return rawQuestions
+      .map((item) => ({
+        type: item.type?.trim() || "General",
+        question: item.question?.trim() || "",
+        hint:
+          item.hint?.trim() ||
+          "Use a specific example from your resume and connect it to the target role.",
+      }))
+      .filter((item) => item.question.length > 0);
+  }
+
   async function handleGenerateInterviewPrep() {
     if (!canPrepareInterview || isPreparingInterview) return;
 
@@ -75,37 +93,44 @@ export function InterviewPrepCard({
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as
+        | InterviewPrepApiResponse
+        | CareerApiErrorResponse;
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Failed to generate interview questions."
-        );
+        const message =
+          "error" in data
+            ? data.error
+            : "Failed to generate interview questions.";
+        throw new Error(message);
       }
 
-      const rawQuestions = data.interviewQuestions || [];
+      if (!("interviewQuestions" in data)) {
+        throw new Error("The API did not return interview questions.");
+      }
 
-      const formattedQuestions: InterviewQuestion[] = rawQuestions.map(
-        (item: string | InterviewQuestion, index: number) => {
-          if (typeof item === "string") {
-            return {
-              type: index % 2 === 0 ? "Technical" : "Behavioral",
-              question: item,
-              hint:
-                "Use a specific project example, explain your decision-making process, and connect your answer to the target role.",
-            };
-          }
+      if (!Array.isArray(data.interviewQuestions)) {
+        throw new Error("Interview questions returned in an invalid format.");
+      }
 
-          return item;
-        }
+      const formattedQuestions = normalizeInterviewQuestions(
+        data.interviewQuestions
       );
+
+      if (formattedQuestions.length === 0) {
+        throw new Error("No valid interview questions were generated.");
+      }
 
       onInterviewQuestionsChange(formattedQuestions);
     } catch (err) {
       console.error(err);
-      setError(
-        "We couldn't generate interview prep. Please check your resume and job description, then try again."
-      );
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "We couldn't generate interview prep. Please check your resume and job description, then try again.";
+
+      setError(message);
     } finally {
       setIsPreparingInterview(false);
     }
@@ -188,6 +213,7 @@ export function InterviewPrepCard({
           <h4>Generated Questions</h4>
           <button
             className="small-button"
+            type="button"
             onClick={() => onCopy(getQuestionsAsText(), "interview")}
           >
             {copiedItem === "interview" ? "Copied!" : "Copy All"}
@@ -197,8 +223,8 @@ export function InterviewPrepCard({
 
       {!isPreparingInterview && (
         <div className="question-list">
-          {questions.map((q) => (
-            <div className="question-card" key={q.question}>
+          {questions.map((q, index) => (
+            <div className="question-card" key={`${q.question}-${index}`}>
               <span>{q.type}</span>
               <h4>{q.question}</h4>
               <p>{q.hint}</p>

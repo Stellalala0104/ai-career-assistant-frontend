@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ParsedResumeSummary } from "../types/career";
+import type {
+  CareerApiErrorResponse,
+  ParsedResumeApiResponse,
+  ParsedResumeSummary,
+} from "@/types/career";
 
 type ResumeParserCardProps = {
   resumeText: string;
@@ -60,33 +64,47 @@ export function ResumeParserCard({
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as
+        | ParsedResumeApiResponse
+        | CareerApiErrorResponse;
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to parse resume.");
+        const message =
+          "error" in data ? data.error : "Failed to parse resume.";
+        throw new Error(message);
+      }
+
+      if (!("parsedResume" in data) || !data.parsedResume) {
+        throw new Error("The API did not return a parsed resume.");
       }
 
       const parsedResume = data.parsedResume;
 
       const formattedSummary: ParsedResumeSummary = {
-        name: parsedResume.name || "Detected Candidate",
-        skills: parsedResume.skills || [],
+        name: parsedResume.name || "Candidate",
+        summary: parsedResume.summary || "",
+        skills: Array.isArray(parsedResume.skills)
+          ? parsedResume.skills.filter(Boolean)
+          : [],
         experience:
           parsedResume.experience ||
           parsedResume.summary ||
-          "Frontend development experience identified from resume.",
-        projects:
-          parsedResume.projects ||
-          parsedResume.experienceHighlights ||
-          [],
+          "No experience summary was extracted.",
+        projects: Array.isArray(parsedResume.projects)
+          ? parsedResume.projects.filter(Boolean)
+          : [],
       };
 
       onParsedSummaryChange(formattedSummary);
     } catch (err) {
       console.error(err);
-      setError(
-        "We couldn't parse your resume. Please check the pasted text and try again."
-      );
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "We couldn't parse your resume. Please check the pasted text and try again.";
+
+      setError(message);
     } finally {
       setIsParsing(false);
     }
@@ -109,6 +127,7 @@ export function ResumeParserCard({
           disabled={isParsing}
           onChange={(e) => {
             const file = e.target.files?.[0];
+
             if (file) {
               setError("");
               onFileSelected(file.name);
@@ -117,7 +136,10 @@ export function ResumeParserCard({
         />
         <span className="upload-icon">↑</span>
         <strong>Upload PDF / DOCX / TXT</strong>
-        <small>Frontend accepts files. Real parsing API can be added later.</small>
+        <small>
+          File upload is accepted by the frontend. Paste the extracted resume
+          text below before parsing.
+        </small>
       </label>
 
       <textarea
@@ -193,20 +215,31 @@ export function ResumeParserCard({
         <div className="result-box">
           <h4>Parsed Resume Preview</h4>
 
-          <div className="tag-row">
-            {parsedSummary.skills.map((skill) => (
-              <span className="tag" key={skill}>
-                {skill}
-              </span>
-            ))}
-          </div>
+          {parsedSummary.skills.length > 0 && (
+            <div className="tag-row">
+              {parsedSummary.skills.map((skill) => (
+                <span className="tag" key={skill}>
+                  {skill}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {parsedSummary.summary && (
+            <p>
+              <strong>Summary:</strong> {parsedSummary.summary}
+            </p>
+          )}
 
           <p>
             <strong>Experience:</strong> {parsedSummary.experience}
           </p>
-          <p>
-            <strong>Projects:</strong> {parsedSummary.projects.join(", ")}
-          </p>
+
+          {parsedSummary.projects.length > 0 && (
+            <p>
+              <strong>Projects:</strong> {parsedSummary.projects.join(", ")}
+            </p>
+          )}
         </div>
       )}
     </article>

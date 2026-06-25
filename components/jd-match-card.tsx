@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { MatchReport } from "../types/career";
 import { ScoreCard } from "@/components/score-card";
+import type {
+  CareerApiErrorResponse,
+  MatchReport,
+  MatchReportApiResponse,
+} from "@/types/career";
 
 type JDMatchCardProps = {
   resumeText: string;
@@ -72,45 +76,48 @@ export function JDMatchCard({
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as
+        | MatchReportApiResponse
+        | CareerApiErrorResponse;
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate match report.");
+        const message =
+          "error" in data ? data.error : "Failed to generate match report.";
+        throw new Error(message);
+      }
+
+      if (!("matchReport" in data) || !data.matchReport) {
+        throw new Error("The API did not return a match report.");
       }
 
       const apiReport = data.matchReport;
 
       const formattedReport: MatchReport = {
-        overallScore: apiReport.overallScore ?? apiReport.score ?? 82,
-        skillsScore: apiReport.skillsScore ?? 84,
-        experienceScore: apiReport.experienceScore ?? 78,
-        keywordScore: apiReport.keywordScore ?? 86,
-        strengths:
-          apiReport.strengths ??
-          apiReport.matchedSkills ??
-          [
-            "Strong frontend foundation",
-            "Relevant React and TypeScript experience",
-          ],
-        gaps:
-          apiReport.gaps ??
-          apiReport.missingSkills ??
-          [
-            "Add more measurable impact",
-            "Mention testing or accessibility experience",
-          ],
-        keywords:
-          apiReport.keywords ??
-          apiReport.matchedSkills ??
-          ["React", "TypeScript", "Next.js", "Frontend"],
+        overallScore: apiReport.overallScore,
+        skillsScore: apiReport.skillsScore,
+        experienceScore: apiReport.experienceScore,
+        keywordScore: apiReport.keywordScore,
+        strengths: Array.isArray(apiReport.strengths)
+          ? apiReport.strengths.filter(Boolean)
+          : [],
+        gaps: Array.isArray(apiReport.gaps)
+          ? apiReport.gaps.filter(Boolean)
+          : [],
+        keywords: Array.isArray(apiReport.keywords)
+          ? apiReport.keywords.filter(Boolean)
+          : [],
       };
 
       onMatchReportChange(formattedReport);
     } catch (err) {
       console.error(err);
-      setError(
-        "We couldn't generate the match report. Please check your resume and job description, then try again."
-      );
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "We couldn't generate the match report. Please check your resume and job description, then try again.";
+
+      setError(message);
     } finally {
       setIsMatching(false);
     }
@@ -209,30 +216,40 @@ export function JDMatchCard({
           <div className="split-list">
             <div>
               <h4>Strengths</h4>
-              <ul>
-                {matchReport.strengths.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              {matchReport.strengths.length > 0 ? (
+                <ul>
+                  {matchReport.strengths.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No strengths were returned.</p>
+              )}
             </div>
 
             <div>
               <h4>Skill Gaps</h4>
-              <ul>
-                {matchReport.gaps.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              {matchReport.gaps.length > 0 ? (
+                <ul>
+                  {matchReport.gaps.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No gaps were returned.</p>
+              )}
             </div>
           </div>
 
-          <div className="tag-row">
-            {matchReport.keywords.map((keyword) => (
-              <span className="tag" key={keyword}>
-                {keyword}
-              </span>
-            ))}
-          </div>
+          {matchReport.keywords.length > 0 && (
+            <div className="tag-row">
+              {matchReport.keywords.map((keyword) => (
+                <span className="tag" key={keyword}>
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </article>

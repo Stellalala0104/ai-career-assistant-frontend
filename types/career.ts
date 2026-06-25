@@ -40,32 +40,11 @@ export type CareerRequestBody = {
 };
 
 export type ParsedResumeApiResponse = {
-  parsedResume: {
-    name?: string;
-    summary?: string;
-    skills?: string[];
-    experience?: string;
-    projects?: string[];
-    experienceHighlights?: string[];
-  };
+  parsedResume: ParsedResumeSummary;
 };
 
 export type MatchReportApiResponse = {
-  matchReport: {
-    score?: number;
-    level?: string;
-    summary?: string;
-    matchedSkills?: string[];
-    missingSkills?: string[];
-    suggestions?: string[];
-    overallScore?: number;
-    skillsScore?: number;
-    experienceScore?: number;
-    keywordScore?: number;
-    strengths?: string[];
-    gaps?: string[];
-    keywords?: string[];
-  };
+  matchReport: MatchReport;
 };
 
 export type RewriteBulletApiResponse = {
@@ -77,7 +56,7 @@ export type CoverLetterApiResponse = {
 };
 
 export type InterviewPrepApiResponse = {
-  interviewQuestions: string[] | InterviewQuestion[];
+  interviewQuestions: InterviewQuestion[];
 };
 
 export type CareerApiErrorResponse = {

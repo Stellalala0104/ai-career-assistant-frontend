@@ -1,33 +1,12 @@
-import { rewriteBulletWithAI } from "@/lib/openai";
 import { NextResponse } from "next/server";
 import {
-  mockGenerateCoverLetter,
-  mockGenerateInterviewQuestions,
-  mockGenerateMatchReport,
-  mockParseResume,
-  mockRewriteBullet,
-} from "@/lib/mock-ai";
-
-type CareerAction =
-  | "parse-resume"
-  | "match-jd"
-  | "rewrite-bullet"
-  | "generate-cover-letter"
-  | "generate-interview-questions";
-
-type CareerRequestBody = {
-  action: CareerAction;
-  resumeText?: string;
-  jobDescription?: string;
-  companyName?: string;
-  roleTitle?: string;
-  bullet?: string;
-  tone?: string;
-};
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+  generateCoverLetterWithAI,
+  generateInterviewQuestionsWithAI,
+  generateMatchReportWithAI,
+  parseResumeWithAI,
+  rewriteBulletWithAI,
+} from "@/lib/openai";
+import type { CareerRequestBody } from "@/types/career";
 
 function createError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -47,8 +26,6 @@ export async function POST(request: Request) {
       tone = "ATS-friendly",
     } = body;
 
-    await delay(1000);
-
     if (!action) {
       return createError("Action is required.");
     }
@@ -58,7 +35,9 @@ export async function POST(request: Request) {
         return createError("Resume text is required.");
       }
 
-      const parsedResume = mockParseResume({ resumeText });
+      const parsedResume = await parseResumeWithAI({
+        resumeText,
+      });
 
       return NextResponse.json({
         parsedResume,
@@ -70,7 +49,7 @@ export async function POST(request: Request) {
         return createError("Resume text and job description are required.");
       }
 
-      const matchReport = mockGenerateMatchReport({
+      const matchReport = await generateMatchReportWithAI({
         resumeText,
         jobDescription,
       });
@@ -81,26 +60,26 @@ export async function POST(request: Request) {
     }
 
     if (action === "rewrite-bullet") {
-       if (!bullet.trim()) {
-    return createError("A resume bullet is required.");
-  }
+      if (!bullet.trim()) {
+        return createError("A resume bullet is required.");
+      }
 
-    const rewrittenBullet = await rewriteBulletWithAI({
-    bullet,
-    tone,
-  });
+      const rewrittenBullet = await rewriteBulletWithAI({
+        bullet,
+        tone,
+      });
 
-  return NextResponse.json({
-    rewrittenBullet,
-  });
-}
+      return NextResponse.json({
+        rewrittenBullet,
+      });
+    }
 
     if (action === "generate-cover-letter") {
       if (!resumeText.trim() || !jobDescription.trim()) {
         return createError("Resume text and job description are required.");
       }
 
-      const coverLetter = mockGenerateCoverLetter({
+      const coverLetter = await generateCoverLetterWithAI({
         resumeText,
         jobDescription,
         companyName,
@@ -113,11 +92,11 @@ export async function POST(request: Request) {
     }
 
     if (action === "generate-interview-questions") {
-      if (!jobDescription.trim()) {
-        return createError("Job description is required.");
+      if (!resumeText.trim() || !jobDescription.trim()) {
+        return createError("Resume text and job description are required.");
       }
 
-      const interviewQuestions = mockGenerateInterviewQuestions({
+      const interviewQuestions = await generateInterviewQuestionsWithAI({
         resumeText,
         jobDescription,
       });
@@ -129,11 +108,20 @@ export async function POST(request: Request) {
 
     return createError("Invalid action.");
   } catch (error) {
-    console.error(error);
+    console.error("Career API error:", error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Something went wrong while processing the request.";
 
     return NextResponse.json(
-      { error: "Something went wrong while processing the request." },
-      { status: 500 }
+      {
+        error: message,
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
