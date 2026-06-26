@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type {
   CareerApiErrorResponse,
+  ExtractResumeApiResponse,
   ParsedResumeApiResponse,
   ParsedResumeSummary,
 } from "@/types/career";
@@ -11,32 +12,39 @@ type ResumeParserCardProps = {
   resumeText: string;
   parsedSummary: ParsedResumeSummary | null;
   onResumeTextChange: (value: string) => void;
-  onFileSelected: (fileName: string) => void;
   onParsedSummaryChange: (summary: ParsedResumeSummary) => void;
 };
+
+const SUPPORTED_FILE_TYPES = [".txt", ".pdf", ".docx"];
 
 export function ResumeParserCard({
   resumeText,
   parsedSummary,
   onResumeTextChange,
-  onFileSelected,
   onParsedSummaryChange,
 }: ResumeParserCardProps) {
   const [isParsing, setIsParsing] = useState(false);
+  const [isExtractingFile, setIsExtractingFile] = useState(false);
   const [error, setError] = useState("");
+  const [uploadedFileName, setUploadedFileName] = useState("");
 
   const hasResumeText = resumeText.trim().length > 0;
   const canParse = resumeText.trim().length > 20;
+  const isBusy = isParsing || isExtractingFile;
 
   const disabledReason = getDisabledReason();
 
   function getDisabledReason() {
+    if (isExtractingFile) {
+      return "Extracting text from your uploaded resume file...";
+    }
+
     if (isParsing) {
       return "Parsing your resume and extracting key career information...";
     }
 
     if (!hasResumeText) {
-      return "Paste your resume text or upload a file to begin.";
+      return "Upload a TXT, PDF, or DOCX resume, or paste resume text manually.";
     }
 
     if (!canParse) {
@@ -46,8 +54,64 @@ export function ResumeParserCard({
     return "";
   }
 
+  function isSupportedFile(file: File) {
+    const lowerName = file.name.toLowerCase();
+
+    return SUPPORTED_FILE_TYPES.some((extension) =>
+      lowerName.endsWith(extension)
+    );
+  }
+
+  async function handleFileSelected(file: File) {
+    setError("");
+    setUploadedFileName(file.name);
+
+    if (!isSupportedFile(file)) {
+      setError("Unsupported file type. Please upload a TXT, PDF, or DOCX file.");
+      return;
+    }
+
+    setIsExtractingFile(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/extract-resume", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = (await response.json()) as
+        | ExtractResumeApiResponse
+        | CareerApiErrorResponse;
+
+      if (!response.ok) {
+        const message =
+          "error" in data ? data.error : "Failed to extract resume text.";
+
+        setError(message);
+        return;
+      }
+
+      if (!("text" in data) || !data.text.trim()) {
+        setError("No readable text was extracted from this file.");
+        return;
+      }
+
+      onResumeTextChange(data.text);
+      setUploadedFileName(data.fileName);
+    } catch {
+      setError(
+        "We couldn't extract text from this file. Please try another file or paste the resume text manually."
+      );
+    } finally {
+      setIsExtractingFile(false);
+    }
+  }
+
   async function handleParseResume() {
-    if (!canParse || isParsing) return;
+    if (!canParse || isBusy) return;
 
     setIsParsing(true);
     setError("");
@@ -71,11 +135,14 @@ export function ResumeParserCard({
       if (!response.ok) {
         const message =
           "error" in data ? data.error : "Failed to parse resume.";
-        throw new Error(message);
+
+        setError(message);
+        return;
       }
 
       if (!("parsedResume" in data) || !data.parsedResume) {
-        throw new Error("The API did not return a parsed resume.");
+        setError("The API did not return a parsed resume.");
+        return;
       }
 
       const parsedResume = data.parsedResume;
@@ -96,15 +163,10 @@ export function ResumeParserCard({
       };
 
       onParsedSummaryChange(formattedSummary);
-    } catch (err) {
-      console.error(err);
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : "We couldn't parse your resume. Please check the pasted text and try again.";
-
-      setError(message);
+    } catch {
+      setError(
+        "We couldn't parse your resume. Please check the extracted text and try again."
+      );
     } finally {
       setIsParsing(false);
     }
@@ -123,24 +185,36 @@ export function ResumeParserCard({
       <label className="upload-box">
         <input
           type="file"
-          accept=".pdf,.docx,.txt"
-          disabled={isParsing}
+          accept=".txt,.pdf,.docx"
+          disabled={isBusy}
           onChange={(e) => {
             const file = e.target.files?.[0];
 
             if (file) {
-              setError("");
-              onFileSelected(file.name);
+              void handleFileSelected(file);
             }
+
+            e.target.value = "";
           }}
         />
         <span className="upload-icon">↑</span>
-        <strong>Upload PDF / DOCX / TXT</strong>
+        <strong>
+          {isExtractingFile
+            ? "Extracting resume text..."
+            : "Upload TXT / PDF / DOCX"}
+        </strong>
         <small>
-          File upload is accepted by the frontend. Paste the extracted resume
-          text below before parsing.
+          The app will extract text first. Review or edit the extracted text
+          below, then click Parse Resume.
         </small>
       </label>
+
+      {uploadedFileName && (
+        <div className="disabled-explanation">
+          <strong>Selected file</strong>
+          <p>{uploadedFileName}</p>
+        </div>
+      )}
 
       <textarea
         className="textarea"
@@ -149,15 +223,15 @@ export function ResumeParserCard({
           setError("");
           onResumeTextChange(e.target.value);
         }}
-        placeholder="Paste resume text here..."
-        disabled={isParsing}
+        placeholder="Upload a resume file or paste resume text here..."
+        disabled={isBusy}
       />
 
       <button
         className={
           isParsing ? "button primary-button loading" : "button primary-button"
         }
-        disabled={!canParse || isParsing}
+        disabled={!canParse || isBusy}
         onClick={handleParseResume}
       >
         {isParsing ? "Parsing..." : "Parse Resume"}
@@ -172,8 +246,16 @@ export function ResumeParserCard({
 
       {error && (
         <div className="error-box">
-          <strong>Resume parsing failed</strong>
+          <strong>Resume processing failed</strong>
           <p>{error}</p>
+        </div>
+      )}
+
+      {isExtractingFile && (
+        <div className="skeleton-box" aria-label="Extracting resume text">
+          <div className="skeleton-line short" />
+          <div className="skeleton-line" />
+          <div className="skeleton-line medium" />
         </div>
       )}
 
@@ -191,27 +273,27 @@ export function ResumeParserCard({
         </div>
       )}
 
-      {!parsedSummary && !isParsing && !error && !hasResumeText && (
+      {!parsedSummary && !isBusy && !error && !hasResumeText && (
         <div className="empty-state">
-          <strong>No resume parsed yet</strong>
+          <strong>No resume text yet</strong>
           <p>
-            Upload a resume file or paste resume text to start extracting skills,
-            experience, and project highlights.
+            Upload a TXT, PDF, or DOCX resume to extract text, or paste resume
+            text manually.
           </p>
         </div>
       )}
 
-      {!parsedSummary && !isParsing && !error && hasResumeText && canParse && (
+      {!parsedSummary && !isBusy && !error && hasResumeText && canParse && (
         <div className="empty-state">
           <strong>Resume text is ready</strong>
           <p>
-            Click Parse Resume to generate a structured preview of skills,
-            experience, and projects.
+            Review the extracted text, then click Parse Resume to generate a
+            structured preview of skills, experience, and projects.
           </p>
         </div>
       )}
 
-      {parsedSummary && !isParsing && (
+      {parsedSummary && !isBusy && (
         <div className="result-box">
           <h4>Parsed Resume Preview</h4>
 

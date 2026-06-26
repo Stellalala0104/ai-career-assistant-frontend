@@ -13,8 +13,10 @@
     "class-variance-authority": "latest",
     "clsx": "latest",
     "lucide-react": "latest",
+    "mammoth": "^1.9.1",
     "next": "latest",
     "openai": "^6.45.0",
+    "pdf-parse": "1.1.1",
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest",
@@ -24,6 +26,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "latest",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "autoprefixer": "latest",

@@ -63,6 +63,11 @@ export default function Home() {
     setCoverLetter("");
   }
 
+  function handleResumeTextChange(value: string) {
+    setResumeText(value);
+    resetResumeDependentResults();
+  }
+
   function getInterviewQuestionsAsText() {
     return questions
       .map(
@@ -89,18 +94,7 @@ Hint: ${q.hint}`
           <ResumeParserCard
             resumeText={resumeText}
             parsedSummary={parsedSummary}
-            onResumeTextChange={(value) => {
-              setResumeText(value);
-              resetResumeDependentResults();
-            }}
-            onFileSelected={(fileName) => {
-              setResumeText(
-                `Uploaded file: ${fileName}
-
-Paste extracted resume text here for now. Backend parsing can be connected later.`
-              );
-              resetResumeDependentResults();
-            }}
+            onResumeTextChange={handleResumeTextChange}
             onParsedSummaryChange={setParsedSummary}
           />
 

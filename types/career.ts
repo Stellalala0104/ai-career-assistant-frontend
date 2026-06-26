@@ -59,6 +59,11 @@ export type InterviewPrepApiResponse = {
   interviewQuestions: InterviewQuestion[];
 };
 
+export type ExtractResumeApiResponse = {
+  fileName: string;
+  text: string;
+};
+
 export type CareerApiErrorResponse = {
   error: string;
 };
