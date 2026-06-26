@@ -22,12 +22,18 @@ export type InterviewQuestion = {
   hint: string;
 };
 
+export type CareerChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export type CareerAction =
   | "parse-resume"
   | "match-jd"
   | "rewrite-bullet"
   | "generate-cover-letter"
-  | "generate-interview-questions";
+  | "generate-interview-questions"
+  | "career-chat";
 
 export type CareerRequestBody = {
   action: CareerAction;
@@ -37,6 +43,10 @@ export type CareerRequestBody = {
   roleTitle?: string;
   bullet?: string;
   tone?: string;
+  question?: string;
+  messages?: CareerChatMessage[];
+  parsedSummary?: ParsedResumeSummary | null;
+  matchReport?: MatchReport | null;
 };
 
 export type ParsedResumeApiResponse = {
@@ -57,6 +67,10 @@ export type CoverLetterApiResponse = {
 
 export type InterviewPrepApiResponse = {
   interviewQuestions: InterviewQuestion[];
+};
+
+export type CareerChatApiResponse = {
+  answer: string;
 };
 
 export type ExtractResumeApiResponse = {

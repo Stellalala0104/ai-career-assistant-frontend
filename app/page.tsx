@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BulletRewriterCard } from "@/components/bullet-rewriter-card";
+import { ChatAssistantCard } from "@/components/chat-assistant-card";
 import { CoverLetterCard } from "@/components/cover-letter-card";
 import { HeroSection } from "@/components/hero-section";
 import { InterviewPrepCard } from "@/components/interview-prep-card";
@@ -162,6 +163,15 @@ Hint: ${q.hint}`
             onInterviewQuestionsChange={setQuestions}
             onCopy={copyToClipboard}
             getQuestionsAsText={getInterviewQuestionsAsText}
+          />
+        </section>
+
+        <section className="grid">
+          <ChatAssistantCard
+            resumeText={resumeText}
+            jobDescription={jobDescription}
+            parsedSummary={parsedSummary}
+            matchReport={matchReport}
           />
         </section>
       </section>

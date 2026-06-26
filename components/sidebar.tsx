@@ -16,11 +16,24 @@ export function Sidebar({ resumeStatus, jdStatus, matchStatus }: SidebarProps) {
       </div>
 
       <nav className="nav-list">
-        <a href="#resume" className="nav-item active">Resume Parser</a>
-        <a href="#match" className="nav-item">JD Match</a>
-        <a href="#rewrite" className="nav-item">Bullet Rewriter</a>
-        <a href="#cover" className="nav-item">Cover Letter</a>
-        <a href="#interview" className="nav-item">Interview Prep</a>
+        <a href="#resume" className="nav-item active">
+          Resume Parser
+        </a>
+        <a href="#match" className="nav-item">
+          JD Match
+        </a>
+        <a href="#rewrite" className="nav-item">
+          Bullet Rewriter
+        </a>
+        <a href="#cover" className="nav-item">
+          Cover Letter
+        </a>
+        <a href="#interview" className="nav-item">
+          Interview Prep
+        </a>
+        <a href="#coach" className="nav-item">
+          AI Career Coach
+        </a>
       </nav>
 
       <div className="sidebar-card">

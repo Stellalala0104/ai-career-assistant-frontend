@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  generateCareerChatWithAI,
   generateCoverLetterWithAI,
   generateInterviewQuestionsWithAI,
   generateMatchReportWithAI,
@@ -24,6 +25,10 @@ export async function POST(request: Request) {
       roleTitle = "",
       bullet = "",
       tone = "ATS-friendly",
+      question = "",
+      messages = [],
+      parsedSummary = null,
+      matchReport = null,
     } = body;
 
     if (!action) {
@@ -103,6 +108,31 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         interviewQuestions,
+      });
+    }
+
+    if (action === "career-chat") {
+      if (!question.trim()) {
+        return createError("A question is required.");
+      }
+
+      if (!resumeText.trim() && !jobDescription.trim() && !matchReport) {
+        return createError(
+          "Resume text, job description, or match report is required before using Career Coach."
+        );
+      }
+
+      const answer = await generateCareerChatWithAI({
+        question,
+        messages,
+        resumeText,
+        jobDescription,
+        parsedSummary,
+        matchReport,
+      });
+
+      return NextResponse.json({
+        answer,
       });
     }
 

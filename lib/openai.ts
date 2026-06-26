@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type {
+  CareerChatMessage,
   InterviewQuestion,
   MatchReport,
   ParsedResumeSummary,
@@ -33,6 +34,15 @@ type GenerateCoverLetterInput = {
 type GenerateInterviewQuestionsInput = {
   resumeText: string;
   jobDescription: string;
+};
+
+type GenerateCareerChatInput = {
+  question: string;
+  messages?: CareerChatMessage[];
+  resumeText: string;
+  jobDescription: string;
+  parsedSummary?: ParsedResumeSummary | null;
+  matchReport?: MatchReport | null;
 };
 
 function assertOpenAIKey() {
@@ -88,6 +98,33 @@ function normalizeStringArray(value: unknown, fallback: string[] = []) {
     .filter(Boolean);
 
   return cleaned.length > 0 ? cleaned : fallback;
+}
+
+function stringifyContext(value: unknown) {
+  if (!value) {
+    return "Not available.";
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "Not available.";
+  }
+}
+
+function sanitizeChatMessages(messages: CareerChatMessage[] = []) {
+  return messages
+    .filter(
+      (message) =>
+        (message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string" &&
+        message.content.trim().length > 0
+    )
+    .slice(-8)
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim().slice(0, 1200),
+    }));
 }
 
 export async function parseResumeWithAI({
@@ -405,4 +442,66 @@ Rules:
       (item): item is InterviewQuestion =>
         Boolean(item && item.question && item.hint)
     );
+}
+
+export async function generateCareerChatWithAI({
+  question,
+  messages = [],
+  resumeText,
+  jobDescription,
+  parsedSummary,
+  matchReport,
+}: GenerateCareerChatInput) {
+  assertOpenAIKey();
+
+  const safeMessages = sanitizeChatMessages(messages);
+
+  const response = await client.responses.create({
+    model: "gpt-4.1-mini",
+    input: [
+      {
+        role: "system",
+        content:
+          "You are AI Career Coach inside a career assistant web app. Give practical, specific, concise advice based on the provided resume, job description, parsed resume summary, and match report. Do not invent experience, employers, degrees, certifications, metrics, or projects. If information is missing, say what is missing and suggest what the user can add.",
+      },
+      {
+        role: "user",
+        content: `Use this context when answering future questions.
+
+Resume text:
+${resumeText || "Not available."}
+
+Job description:
+${jobDescription || "Not available."}
+
+Parsed resume summary:
+${stringifyContext(parsedSummary)}
+
+Match report:
+${stringifyContext(matchReport)}
+
+Rules:
+- Answer in a helpful career coach style.
+- Be specific to the available resume and job description.
+- Keep the response under 180 words unless the user asks for a longer answer.
+- Use bullets only when they improve readability.
+- Do not invent fake achievements or fake metrics.
+- If rewriting resume content, preserve the user's real background.`,
+      },
+      ...safeMessages,
+      {
+        role: "user",
+        content: question,
+      },
+    ],
+    max_output_tokens: 650,
+  });
+
+  const text = response.output_text.trim();
+
+  if (!text) {
+    throw new Error("OpenAI returned an empty career chat response.");
+  }
+
+  return text;
 }
