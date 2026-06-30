@@ -19,6 +19,7 @@ Live app: https://ai-career-assistant-frontend.vercel.app/
 * Interview preparation questions with answer hints
 * Loading states and user-facing error handling
 * Modular React component architecture
+* GitHub Actions CI workflow for automated production build checks
 * Deployed on Vercel
 
 ## Tech Stack
@@ -27,6 +28,7 @@ Live app: https://ai-career-assistant-frontend.vercel.app/
 * React
 * TypeScript
 * OpenAI API
+* GitHub Actions
 * Vercel
 * pdf-parse
 * mammoth
@@ -36,7 +38,7 @@ Live app: https://ai-career-assistant-frontend.vercel.app/
 
 This project was built as a practical AI product prototype for job application workflows. Instead of only showing static resume tips, the app allows users to upload or paste their resume, compare it with a target job description, and receive structured AI-generated feedback.
 
-The goal was to practise building a production-style AI application with frontend state management, reusable components, backend API routes, file parsing, prompt design, structured JSON responses, and deployment.
+The goal was to practise building a production-style AI application with frontend state management, reusable components, backend API routes, file parsing, prompt design, structured JSON responses, CI/CD workflow setup, and deployment.
 
 ## How It Works
 
@@ -81,7 +83,7 @@ Generates role-specific technical, behavioural, and project-based interview ques
 Clone the repository:
 
 ```bash
-git clone YOUR_GITHUB_REPO_URL
+git clone https://github.com/Stellalala0104/ai-career-assistant-frontend.git
 cd ai-career-assistant-frontend
 ```
 
@@ -142,6 +144,12 @@ When deploying to Vercel, add the following environment variable in the Vercel p
 ```env
 OPENAI_API_KEY=your_openai_api_key
 ```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration. On every push or pull request to the `main` branch, the workflow installs dependencies and runs a production build for the Next.js application.
+
+Continuous deployment is handled through Vercel. After changes are pushed to the `main` branch, Vercel automatically creates a new production deployment once the build succeeds.
 
 ## Limitations
 
